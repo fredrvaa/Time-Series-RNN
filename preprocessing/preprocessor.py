@@ -9,23 +9,22 @@ from sklearn.preprocessing import StandardScaler
 class Preprocessor:
     @staticmethod
     def clip(data: pd.DataFrame,
-             clip_low: float = .05,
-             clip_high: float = .05,
+             clip_percent: float = .01,
              q_low: float = .25,
              q_high: float = .75,
              columns: Optional[list[str]] = None) -> pd.DataFrame:
 
-        n_low = int(data.shape[0] * clip_low)
-        n_high = int(data.shape[0] * clip_high)
+        n_clip = int(data.shape[0] * clip_percent)
 
         if columns is None:
             columns = data.columns
 
         for column in columns:
+            dev = (data[column] - data[column].mean()).abs().sort_values(ascending=False)[:n_clip]
             low, high = data[column].quantile([q_low, q_high])
 
-            data[column][data.nsmallest(n_low, columns=[column]).index] = low
-            data[column][data.nlargest(n_high, columns=[column]).index] = high
+            data.loc[dev.index.intersection(data[data[column] >= high].index), column] = high
+            data.loc[dev.index.intersection(data[data[column] <= low].index), column] = low
 
         return data
 

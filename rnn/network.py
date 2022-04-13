@@ -1,5 +1,6 @@
 from typing import Optional
 
+import numpy as np
 import pandas as pd
 import tensorflow.keras as tfk
 import tensorflow.keras.layers as tfkl
@@ -14,6 +15,8 @@ class Network:
                  dropout_rate: float = 1e-1,
                  learning_rate: float = 1e-3,
                  ):
+
+        self.sequence_length = input_shape[0]
 
         self.model = tfk.Sequential(layers=[
                 tfkl.InputLayer(input_shape=input_shape),
@@ -43,6 +46,27 @@ class Network:
 
         self.model.fit(train_gen, validation_data=val_gen, epochs=epochs, callbacks=callbacks)
 
-    def multistep_predict(self, ):
-        pass
+    def multistep_predict(self, x: pd.DataFrame, forecast_start: int = 0, forecast_steps: int = 24) -> np.ndarray:
+        if forecast_start < self.sequence_length:
+            forecast_start = self.sequence_length
+            print(f'Forecast start was set to {self.sequence_length}')
+        if forecast_start > x.shape[0] - forecast_steps:
+            forecast_start = x.shape[0] - forecast_steps
+            print(f'Forecast start was set to {x.shape[0] - forecast_steps}')
+
+        model_input = x[forecast_start:forecast_start+self.sequence_length]
+        forecasts = []
+        forecast = self.model(model_input)
+        forecasts.append(forecast)
+        for _ in range(self.sequence_length-1):
+            forecast_start += 1
+            model_input = x[forecast_start:forecast_start+self.sequence_length]
+            # Replace prev_y with prev forecast
+            model_input['prev_y'][self.sequence_length - 1] = forecast
+            forecast = self.model(model_input)
+            forecasts.append(forecast)
+
+        return np.array(forecasts)
+
+
 

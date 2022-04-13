@@ -91,17 +91,23 @@ class Preprocessor:
         return data
 
     @staticmethod
-    def add_prior_day_mean(data: pd.DataFrame) -> pd.DataFrame:
-        pass
+    def add_rolling_mean(data: pd.DataFrame) -> pd.DataFrame:
+        data['rolling_mean'] = data['y'].rolling(5).mean()
+        return data
 
     @staticmethod
     def pipeline(data: pd.DataFrame, preprocessing: bool = True, feature_engineering: bool = True) -> pd.DataFrame:
         if preprocessing:
-            data = Preprocessor.clip(data)
+            data = Preprocessor.clip(data, columns=['y'])
             data = Preprocessor.scale(data)
+
         if feature_engineering:
             data = Preprocessor.add_time_of_day(data)
             data = Preprocessor.add_time_of_week(data)
             data = Preprocessor.add_time_of_year(data)
+
+            data = Preprocessor.add_prev_target(data)
+            data = Preprocessor.add_rolling_mean(data)
+            data.dropna(inplace=True)
         return data
 

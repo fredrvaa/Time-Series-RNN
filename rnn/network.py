@@ -55,15 +55,17 @@ class Network:
             print(f'Forecast start was set to {x.shape[0] - forecast_steps}')
 
         model_input = x[forecast_start:forecast_start+self.sequence_length]
+        model_input = np.expand_dims(model_input, axis=0)
         forecasts = []
-        forecast = self.model(model_input)
+        forecast = float(self.model(model_input)[0][0])
         forecasts.append(forecast)
         for _ in range(self.sequence_length-1):
             forecast_start += 1
             model_input = x[forecast_start:forecast_start+self.sequence_length]
             # Replace prev_y with prev forecast
-            model_input['prev_y'][self.sequence_length - 1] = forecast
-            forecast = self.model(model_input)
+            model_input.at[model_input.index[self.sequence_length - 1], 'prev_y'] = forecast
+            model_input = np.expand_dims(model_input, axis=0)
+            forecast = float(self.model(model_input)[0][0])
             forecasts.append(forecast)
 
         return np.array(forecasts)

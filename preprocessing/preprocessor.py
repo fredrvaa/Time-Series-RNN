@@ -86,6 +86,15 @@ class Preprocessor:
         return data
 
     @staticmethod
+    def add_prev_target(data: pd.DataFrame) -> pd.DataFrame:
+        data['prev_y'] = data['y'].shift(1)
+        return data
+
+    @staticmethod
+    def add_prior_day_mean(data: pd.DataFrame) -> pd.DataFrame:
+        pass
+
+    @staticmethod
     def pipeline(data: pd.DataFrame, preprocessing: bool = True, feature_engineering: bool = True) -> pd.DataFrame:
         if preprocessing:
             data = Preprocessor.clip(data)

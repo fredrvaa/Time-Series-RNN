@@ -27,8 +27,7 @@ class Network:
             ]
         )
 
-        self.model.compile(optimizer=tfk.optimizers.Adam(learning_rate=learning_rate, decay=decay), loss='mse', 
-                           metrics=['mean_absolute_error'])
+        self.model.compile(optimizer=tfk.optimizers.Adam(learning_rate=learning_rate, decay=decay), loss='mse')
         self.model.summary()
 
     def fit(self,
@@ -47,7 +46,7 @@ class Network:
 
         self.model.fit(train_gen, validation_data=val_gen, epochs=epochs, callbacks=callbacks)
 
-    def multistep_predict(self, x: pd.DataFrame, forecast_start: int = 0, forecast_steps: int = 24) -> np.ndarray:
+    def multistep_predict(self, x: pd.DataFrame, y: Optional[pd.DataFrame] = None, forecast_start: int = 0, forecast_steps: int = 24) -> np.ndarray:
         if forecast_start < self.sequence_length:
             forecast_start = self.sequence_length
             print(f'Forecast start was set to {self.sequence_length}')
@@ -70,6 +69,7 @@ class Network:
             forecasts.append(forecast)
 
         return np.array(forecasts)
+            
 
 
 

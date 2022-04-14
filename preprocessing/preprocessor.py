@@ -4,7 +4,7 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 from preprocessing.utils import to_datetime
 
@@ -43,8 +43,8 @@ class Preprocessor:
         return data
 
     @staticmethod
-    def scale(data: pd.DataFrame, scaler=StandardScaler):
-        data[:] = scaler().fit_transform(data)
+    def scale(data: pd.DataFrame, scaler=StandardScaler()):
+        data[:] = scaler.fit_transform(data)
         return data
 
     #######################
@@ -105,6 +105,7 @@ class Preprocessor:
     @staticmethod
     def pipeline(data: pd.DataFrame, preprocessing: bool = True, feature_engineering: bool = True) -> pd.DataFrame:
         if preprocessing:
+            #scaler = MinMaxScaler(feature_range=(-1, 1))
             data = Preprocessor.clip(data, columns=['y'])
             data = Preprocessor.scale(data)
 

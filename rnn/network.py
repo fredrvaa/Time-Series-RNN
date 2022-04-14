@@ -12,22 +12,23 @@ class Network:
                  input_shape: tuple,
                  output_units: int,
                  hidden_units: list[int],
-                 dropout_rate: float = 1e-1,
+                 dropout_rate: float = 0.2,
                  learning_rate: float = 1e-3,
+                 decay: float = 1e-6
                  ):
 
         self.sequence_length = input_shape[0]
 
         self.model = tfk.Sequential(layers=[
                 tfkl.InputLayer(input_shape=input_shape),
-                *[tfkl.LSTM(units=units, dropout=dropout_rate, return_sequences=True) for units in hidden_units[:-2]],
-                tfkl.LSTM(units=hidden_units[-2], dropout=dropout_rate),
-                tfkl.Dense(units=hidden_units[-1], activation='relu'),
-                tfkl.Dense(units=output_units, activation=None)
+                *[tfkl.LSTM(units=units, dropout=dropout_rate, return_sequences=True) for units in hidden_units[:-1]],
+                tfkl.LSTM(units=hidden_units[-1], dropout=dropout_rate),
+                tfkl.Dense(units=output_units, activation='linear')
             ]
         )
 
-        self.model.compile(optimizer=tfk.optimizers.Adam(learning_rate), loss='mse')
+        self.model.compile(optimizer=tfk.optimizers.Adam(learning_rate=learning_rate, decay=decay), loss='mse', 
+                           metrics=['mean_absolute_error'])
         self.model.summary()
 
     def fit(self,
@@ -57,15 +58,15 @@ class Network:
         model_input = x[forecast_start:forecast_start+self.sequence_length]
         model_input = np.expand_dims(model_input, axis=0)
         forecasts = []
-        forecast = float(self.model(model_input)[0][0])
+        forecast = float(self.model.predict(model_input)[0][0])
         forecasts.append(forecast)
-        for _ in range(self.sequence_length-1):
+        for _ in range(forecast_steps-1):
             forecast_start += 1
             model_input = x[forecast_start:forecast_start+self.sequence_length]
             # Replace prev_y with prev forecast
             model_input.at[model_input.index[self.sequence_length - 1], 'prev_y'] = forecast
             model_input = np.expand_dims(model_input, axis=0)
-            forecast = float(self.model(model_input)[0][0])
+            forecast = float(self.model.predict(model_input)[0][0])
             forecasts.append(forecast)
 
         return np.array(forecasts)

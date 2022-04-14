@@ -7,7 +7,7 @@ import tensorflow.keras as tfk
 from preprocessing.preprocessor import Preprocessor
 from rnn.network import Network
 
-sequence_length = 12*4
+sequence_length = 12*12
 epochs = 100
 learning_rate = 1e-3
 decay = 1e-6

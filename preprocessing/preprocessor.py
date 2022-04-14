@@ -1,3 +1,4 @@
+import datetime
 import math
 from typing import Optional
 
@@ -54,7 +55,7 @@ class Preprocessor:
     def add_time_of_day(data: pd.DataFrame) -> pd.DataFrame:
         def to_time_of_day(idx: str):
             idx = to_datetime(idx)
-            return idx.hour // 4
+            return idx.hour // 6
 
         prefix = 'time_of_day'
         data[prefix] = data.index.map(to_time_of_day)
@@ -75,8 +76,8 @@ class Preprocessor:
     @staticmethod
     def add_time_of_year(data: pd.DataFrame) -> pd.DataFrame:
         def to_time_of_year(time: str) -> int:
-            time = to_datetime(time)
-            return (time.month + 1) // 4
+            month = to_datetime(time).month
+            return month // 4
 
         prefix = 'time_of_year'
         data[prefix] = data.index.map(to_time_of_year)
@@ -91,8 +92,14 @@ class Preprocessor:
         return data
 
     @staticmethod
+    def add_prev_day_target(data: pd.DataFrame) -> pd.DataFrame:
+        increment = 5
+        data['prev_day_y'] = data['y'].shift(24 * 60 // increment)
+        return data
+
+    @staticmethod
     def add_rolling_mean(data: pd.DataFrame) -> pd.DataFrame:
-        data['rolling_mean'] = data['y'].rolling(5).mean()
+        data['rolling_mean'] = data['y'].rolling(6).mean()
         return data
 
     @staticmethod
@@ -107,6 +114,7 @@ class Preprocessor:
             data = Preprocessor.add_time_of_year(data)
 
             data = Preprocessor.add_prev_target(data)
+            data = Preprocessor.add_prev_day_target(data)
             data = Preprocessor.add_rolling_mean(data)
             data.dropna(inplace=True)
         return data

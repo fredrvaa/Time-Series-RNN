@@ -46,26 +46,27 @@ class Network:
 
         self.model.fit(train_gen, validation_data=val_gen, epochs=epochs, callbacks=callbacks)
 
-    def multistep_predict(self, x: pd.DataFrame, y: Optional[pd.DataFrame] = None, forecast_start: int = 0, forecast_steps: int = 24) -> np.ndarray:
-        if forecast_start < self.sequence_length:
-            forecast_start = self.sequence_length
-            print(f'Forecast start was set to {self.sequence_length}')
-        if forecast_start > x.shape[0] - forecast_steps:
-            forecast_start = x.shape[0] - forecast_steps
-            print(f'Forecast start was set to {x.shape[0] - forecast_steps}')
+    def multistep_predict(self, x: pd.DataFrame, start_idx: int = 0, forecast_steps: int = 24) -> np.ndarray:
+        if start_idx > x.shape[0] - forecast_steps:
+            raise ValueError(f'Start idx can max be {x.shape[0] - forecast_steps}, but {start_idx} was given')
 
-        model_input = x[forecast_start:forecast_start+self.sequence_length]
+        def get_forecast(model_input):
+            forecast = self.model.predict(model_input)
+            return float(forecast[0][0])
+
+        x = x.copy()
+
+        model_input = x[start_idx:start_idx+self.sequence_length]
         model_input = np.expand_dims(model_input, axis=0)
         forecasts = []
-        forecast = float(self.model.predict(model_input)[0][0])
+        forecast = get_forecast(model_input)
         forecasts.append(forecast)
         for _ in range(forecast_steps-1):
-            forecast_start += 1
-            model_input = x[forecast_start:forecast_start+self.sequence_length]
-            # Replace prev_y with prev forecast
-            model_input.at[model_input.index[self.sequence_length - 1], 'prev_y'] = forecast
+            start_idx += 1
+            model_input = x[start_idx:start_idx+self.sequence_length]
+            model_input.at[model_input.index[-1], 'prev_y'] = forecast
             model_input = np.expand_dims(model_input, axis=0)
-            forecast = float(self.model.predict(model_input)[0][0])
+            forecast = get_forecast(model_input)
             forecasts.append(forecast)
 
         return np.array(forecasts)

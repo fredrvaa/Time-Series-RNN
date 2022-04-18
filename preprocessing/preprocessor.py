@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
-from preprocessing.utils import to_datetime
+from preprocessing.utils import to_datetime, get_day_seconds, get_year_seconds
 
 
 class Preprocessor:
@@ -52,7 +52,7 @@ class Preprocessor:
     #######################
 
     @staticmethod
-    def add_time_of_day(data: pd.DataFrame) -> pd.DataFrame:
+    def add_time_of_day_categorical(data: pd.DataFrame) -> pd.DataFrame:
         def to_time_of_day(idx: str):
             idx = to_datetime(idx)
             return idx.hour // 6
@@ -65,7 +65,7 @@ class Preprocessor:
         return data
 
     @staticmethod
-    def add_time_of_week(data: pd.DataFrame) -> pd.DataFrame:
+    def add_time_of_week_categorical(data: pd.DataFrame) -> pd.DataFrame:
         def to_time_of_week(time: str) -> int:
             time = to_datetime(time)
             return 0 if time.weekday() < 4 else 1
@@ -74,7 +74,7 @@ class Preprocessor:
         return data
 
     @staticmethod
-    def add_time_of_year(data: pd.DataFrame) -> pd.DataFrame:
+    def add_time_of_year_categorical(data: pd.DataFrame) -> pd.DataFrame:
         def to_time_of_year(time: str) -> int:
             month = to_datetime(time).month
             return month // 4
@@ -84,6 +84,32 @@ class Preprocessor:
         one_hot = pd.get_dummies(data[prefix], prefix=prefix)
         data = data.drop(prefix, axis=1)
         data = data.join(one_hot)
+        return data
+
+    @staticmethod
+    def add_seconds(data: pd.DataFrame, key: str = 'seconds') -> pd.DataFrame:
+        def to_total_seconds(time: str) -> float:
+            return to_datetime(time).timestamp()
+
+        data[key] = data.index.map(to_total_seconds)
+        return data
+
+    @staticmethod
+    def add_time_of_day_trigonometric(data: pd.DataFrame) -> pd.DataFrame:
+        key = 'temp_seconds1'
+        data = Preprocessor.add_seconds(data, key)
+        data['time_of_day_sin'] = np.sin(data[key] * (2 * np.pi / get_day_seconds()))
+        data['time_of_day_cos'] = np.cos(data[key] * (2 * np.pi / get_day_seconds()))
+        data.drop(columns=[key], inplace=True)
+        return data
+
+    @staticmethod
+    def add_time_of_year_trigonometric(data: pd.DataFrame) -> pd.DataFrame:
+        key = 'temp_seconds2'
+        data = Preprocessor.add_seconds(data, key)
+        data['time_of_year_sin'] = np.sin(data[key] * (2 * np.pi / get_year_seconds()))
+        data['time_of_year_cos'] = np.cos(data[key] * (2 * np.pi / get_year_seconds()))
+        data.drop(columns=[key], inplace=True)
         return data
 
     @staticmethod
@@ -99,7 +125,7 @@ class Preprocessor:
 
     @staticmethod
     def add_rolling_mean(data: pd.DataFrame) -> pd.DataFrame:
-        data['rolling_mean'] = data['y'].rolling(6).mean()
+        data['rolling_mean'] = data['y'].shift(1).rolling(6).mean()
         return data
 
     @staticmethod
@@ -110,9 +136,12 @@ class Preprocessor:
             data = Preprocessor.scale(data)
 
         if feature_engineering:
-            data = Preprocessor.add_time_of_day(data)
-            data = Preprocessor.add_time_of_week(data)
-            data = Preprocessor.add_time_of_year(data)
+            data = Preprocessor.add_time_of_day_categorical(data)
+            data = Preprocessor.add_time_of_week_categorical(data)
+            data = Preprocessor.add_time_of_year_categorical(data)
+
+            data = Preprocessor.add_time_of_day_trigonometric(data)
+            data = Preprocessor.add_time_of_year_trigonometric(data)
 
             data = Preprocessor.add_prev_target(data)
             data = Preprocessor.add_prev_day_target(data)
